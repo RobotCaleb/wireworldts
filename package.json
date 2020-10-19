@@ -1,0 +1,13 @@
+{
+    "name": "wireworldts",
+    "description": "Wireworld in TypeScript",
+    "readme": "none",
+    "repository": {},
+    "license": "MIT",
+    "scripts": {
+        "tsc": "tsc"
+    },
+    "devDependencies": {
+        "typescript": "^4.0.3"
+    }
+}

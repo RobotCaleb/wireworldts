@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<!--[if lt IE 7]>      <html class="no-js lt-ie9 lt-ie8 lt-ie7"> <![endif]-->
+<!--[if IE 7]>         <html class="no-js lt-ie9 lt-ie8"> <![endif]-->
+<!--[if IE 8]>         <html class="no-js lt-ie9"> <![endif]-->
+<!--[if gt IE 8]>      <html class="no-js"> <!--<![endif]-->
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title></title>
+    <meta name="description" content="">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="">
+</head>
+
+<body>
+    <!--[if lt IE 7]>
+            <p class="browsehappy">You are using an <strong>outdated</strong> browser. Please <a href="#">upgrade your browser</a> to improve your experience.</p>
+        <![endif]-->
+    <canvas width="1" height="1" id="world" style="border: 1px solid black;
+               image-rendering: optimizeSpeed;
+               image-rendering: crisp-edges;
+               image-rendering: -moz-crisp-edges;
+               image-rendering: -o-crisp-edges;
+               image-rendering: -webkit-optimize-contrast;
+               -ms-interpolation-mode: nearest-neighbor;">
+    </canvas>
+    <br />
+    <form id="drawType">
+        <label><input type="radio" name="drawType" id="dthead" value="head" />Head</label>
+        <label><input type="radio" name="drawType" id="dttail" value="tail" />Tail</label>
+        <label><input type="radio" checked="checked" name="drawType" id="dtwire" value="wire" />Wire</label>
+        <label><input type="radio" name="drawType" id="dtnone" value="none" />None</label>
+    </form>
+    <button id="clear">Clear</button>
+    <select name="size" id="size">
+        <option value="25">25px</option>
+        <option selected="selected" value="50">50px</option>
+        <option value="100">100px</option>
+        <option value="200">200px</option>
+        <option value="400">400px</option>
+    </select>
+    <select name="scale" id="scale">
+        <option value="1">1x</option>
+        <option value="2">2x</option>
+        <option value="4">4x</option>
+        <option selected="selected" value="8">8x</option>
+        <option value="16">16x</option>
+    </select>
+    <button id="update">>></button>
+    <script src="js/ww.js" async defer></script>
+</body>
+
+</html>
