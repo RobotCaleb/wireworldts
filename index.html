@@ -34,7 +34,6 @@
         <label><input type="radio" checked="checked" name="drawType" id="dtwire" value="wire" />Wire</label>
         <label><input type="radio" name="drawType" id="dtnone" value="none" />None</label>
     </form>
-    <button id="clear">Clear</button>
     <select name="size" id="size">
         <option value="25">25px</option>
         <option selected="selected" value="50">50px</option>
@@ -49,7 +48,16 @@
         <option selected="selected" value="8">8x</option>
         <option value="16">16x</option>
     </select>
-    <button id="update">>></button>
+    <button id="clear">Clear</button>
+    <button id="reset">|<</button>
+    <button id="step">></button>
+    <button id="run">>></button>
+    <button id="pause">||</button>
+    <br/>
+    <button id="export">Export</button>
+    <button id="import">Import</button>
+    <br/>
+    <textarea id="textpad"></textarea>
     <script src="js/ww.js" async defer></script>
 </body>
 

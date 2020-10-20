@@ -26,12 +26,16 @@ class WireWorld {
     private painting: boolean;
 
     private grid: WWType[] = [];
-    private grid2: WWType[] = [];
+    private wire: WWType[] = [];
 
     private image: ImageData;
 
     private scale: number;
     private size: number;
+
+    private lastUpdate: number;
+    private frameTime: number;
+    private animFrame: number;
 
     constructor(x: number, y: number) {
         let canvas = document.getElementById("world") as HTMLCanvasElement;
@@ -41,17 +45,19 @@ class WireWorld {
         this.sizeSelector = document.getElementById("size") as HTMLSelectElement;
 
         context.imageSmoothingEnabled = false;
-        context.imageSmoothingQuality = "low";
 
         this.canvas = canvas;
         this.context = context;
 
-        this.reset();
+        this.frameTime = 1000 / 15;
+        this.lastUpdate = Date.now();
+
+        this.initialize();
 
         this.createUserEvents();
     }
 
-    private reset = () => {
+    private initialize = (skipArrays: boolean = false) => {
         let size = parseInt(this.sizeSelector.value);
         let scale = parseInt(this.scaleSelector.value);
 
@@ -65,13 +71,17 @@ class WireWorld {
         this.canvas.style.width = (size * this.scale).toString() + "px";
         this.canvas.style.height = (size * this.scale).toString() + "px";
 
-        this.grid = new Array<WWType>(size * size);
-        this.grid2 = new Array<WWType>(size * size);
+        if (!skipArrays) {
+            this.grid = new Array<WWType>(size * size);
+            this.wire = new Array<WWType>(size * size);
+            this.clearWorld();
+        }
 
         this.drawType = WWType.Wire;
+        (document.getElementById("dtwire") as HTMLInputElement).checked = true;
         this.painting = false;
 
-        this.clearWorld();
+        this.animFrame = 0;
     }
 
     private createUserEvents() {
@@ -90,11 +100,19 @@ class WireWorld {
         document.getElementById("dttail").addEventListener("click", () => { this.setDrawType(WWType.Tail); });
         document.getElementById("dtwire").addEventListener("click", () => { this.setDrawType(WWType.Wire); });
         document.getElementById("dtnone").addEventListener("click", () => { this.setDrawType(WWType.None); });
-        document.getElementById("clear").addEventListener("click", () => { this.clearWorld(); });
-        document.getElementById("update").addEventListener("click", () => { this.update(); });
 
-        this.scaleSelector.addEventListener("change", this.reset);
-        this.sizeSelector.addEventListener("change", this.reset);
+        document.getElementById("step").addEventListener("click", () => { this.update(); });
+        document.getElementById("run").addEventListener("click", () => { this.run(); });
+        document.getElementById("pause").addEventListener("click", () => { this.pause(); });
+        document.getElementById("reset").addEventListener("click", () => { this.reset(); });
+
+        document.getElementById("clear").addEventListener("click", () => { this.clearWorld(); });
+
+        document.getElementById("export").addEventListener("click", () => { this.exportWorld(); });
+        document.getElementById("import").addEventListener("click", () => { this.importWorld(); });
+
+        this.scaleSelector.addEventListener("change", () => { this.initialize(); });
+        this.sizeSelector.addEventListener("change", () => { this.initialize(); });
     }
 
     private setDrawType(type: WWType) {
@@ -114,10 +132,14 @@ class WireWorld {
         mouseX /= this.scale;
         mouseY /= this.scale;
 
-        console.log("x:" + mouseX + "  y:" + mouseY);
+        mouseX = Math.floor(mouseX);
+        mouseY = Math.floor(mouseY);
 
         this.painting = true;
-        this.addTypeToGrid(this.grid, this.drawType, Math.floor(mouseX), Math.floor(mouseY));
+        if (this.drawType == WWType.Wire || this.drawType == WWType.None) {
+            this.addTypeToGrid(this.wire, this.drawType, mouseX, mouseY);
+        }
+        this.addTypeToGrid(this.grid, this.drawType, mouseX, mouseY);
         this.render();
     }
 
@@ -134,8 +156,14 @@ class WireWorld {
         mouseX /= this.scale;
         mouseY /= this.scale;
 
+        mouseX = Math.floor(mouseX);
+        mouseY = Math.floor(mouseY);
+
         if (this.painting) {
-            this.addTypeToGrid(this.grid, this.drawType, Math.floor(mouseX), Math.floor(mouseY));
+            if (this.drawType == WWType.Wire || this.drawType == WWType.None) {
+                this.addTypeToGrid(this.wire, this.drawType, mouseX, mouseY);
+            }
+            this.addTypeToGrid(this.grid, this.drawType, mouseX, mouseY);
             this.render();
         }
 
@@ -150,8 +178,14 @@ class WireWorld {
     private clearWorld() {
         for (let i: number = 0; i < this.size * this.size; ++i) {
             this.grid[i] = WWType.None;
-            this.grid2[i] = WWType.None;
+            this.wire[i] = WWType.None;
         }
+        this.render();
+    }
+
+    private reset = () => {
+        this.pause();
+        this.grid = this.wire.slice(0, this.size * this.size);
         this.render();
     }
 
@@ -202,19 +236,35 @@ class WireWorld {
         this.context.putImageData(this.image, 0, 0);
     }
 
+    private run = () => {
+        let now = Date.now();
+        if (now - this.lastUpdate >= this.frameTime) {
+            this.lastUpdate = now;
+            this.update();
+            this.animFrame = requestAnimationFrame(this.run);
+            return;
+        }
+        this.animFrame = requestAnimationFrame(this.run);
+    }
+
+    private pause = () => {
+        cancelAnimationFrame(this.animFrame);
+    }
+
     private update = () => {
+        let grid2 = new Array<WWType>(this.size * this.size);
         for (let y = 0; y < this.size; ++y) {
             for (let x = 0; x < this.size; ++x) {
                 let type = this.getTypeFromGrid(this.grid, x, y);
                 switch (type) {
                     case WWType.None:
-                        this.addTypeToGrid(this.grid2, WWType.None, x, y);
+                        this.addTypeToGrid(grid2, WWType.None, x, y);
                         break;
                     case WWType.Tail:
-                        this.addTypeToGrid(this.grid2, WWType.Wire, x, y);
+                        this.addTypeToGrid(grid2, WWType.Wire, x, y);
                         break;
                     case WWType.Head:
-                        this.addTypeToGrid(this.grid2, WWType.Tail, x, y);
+                        this.addTypeToGrid(grid2, WWType.Tail, x, y);
                         break;
                     case WWType.Wire:
                         let count = 0;
@@ -227,18 +277,59 @@ class WireWorld {
                         if (this.getTypeFromGrid(this.grid, x - 0, y + 1) == WWType.Head) { count++; }
                         if (this.getTypeFromGrid(this.grid, x + 1, y + 1) == WWType.Head) { count++; }
                         if (count == 1 || count == 2) {
-                            this.addTypeToGrid(this.grid2, WWType.Head, x, y);
+                            this.addTypeToGrid(grid2, WWType.Head, x, y);
                         }
                         else {
-                            this.addTypeToGrid(this.grid2, WWType.Wire, x, y);
+                            this.addTypeToGrid(grid2, WWType.Wire, x, y);
                         }
-                        break;                
+                        break;
                     default:
                         break;
                 }
             }
         }
-        this.grid = this.grid2.slice(0, this.size * this.size);
+        this.grid = grid2.slice(0, this.size * this.size);
+        this.render();
+    }
+
+    private exportWorld = () => {
+        let ex = {
+            size: this.size,
+            scale: this.scale,
+            grid: this.grid.slice(0, this.size * this.size),
+            wire: this.wire.slice(0, this.size * this.size),
+        };
+
+        let json = JSON.stringify(ex);
+        (document.getElementById("textpad") as HTMLTextAreaElement).value = btoa(json);
+    }
+
+    private importWorld = () => {
+        let json = atob((document.getElementById("textpad") as HTMLTextAreaElement).value);
+
+        let ex = JSON.parse(json);
+        let scale = ex.scale;
+        let size = ex.size;
+        let grid: WWType[] = ex.grid;
+        let wire: WWType[] = ex.wire;
+
+        this.grid = grid.slice(0, size * size);
+        this.wire = wire.slice(0, size * size);
+        this.scale = scale;
+        this.size = size;
+        for (let i = 0; i < this.scaleSelector.options.length; ++i) {
+            if (this.scaleSelector.options.item(i).value == scale) {
+                this.scaleSelector.selectedIndex = i;
+                break;
+            }
+        }
+        for (let i = 0; i < this.sizeSelector.options.length; ++i) {
+            if (this.sizeSelector.options.item(i).value == size) {
+                this.sizeSelector.selectedIndex = i;
+                break;
+            }
+        }
+        this.initialize(true);
         this.render();
     }
 }

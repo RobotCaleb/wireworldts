@@ -17,8 +17,9 @@ var WireWorld = /** @class */ (function () {
     function WireWorld(x, y) {
         var _this = this;
         this.grid = [];
-        this.grid2 = [];
-        this.reset = function () {
+        this.wire = [];
+        this.initialize = function (skipArrays) {
+            if (skipArrays === void 0) { skipArrays = false; }
             var size = parseInt(_this.sizeSelector.value);
             var scale = parseInt(_this.scaleSelector.value);
             _this.scale = scale;
@@ -28,11 +29,15 @@ var WireWorld = /** @class */ (function () {
             _this.canvas.height = size;
             _this.canvas.style.width = (size * _this.scale).toString() + "px";
             _this.canvas.style.height = (size * _this.scale).toString() + "px";
-            _this.grid = new Array(size * size);
-            _this.grid2 = new Array(size * size);
+            if (!skipArrays) {
+                _this.grid = new Array(size * size);
+                _this.wire = new Array(size * size);
+                _this.clearWorld();
+            }
             _this.drawType = WWType.Wire;
+            document.getElementById("dtwire").checked = true;
             _this.painting = false;
-            _this.clearWorld();
+            _this.animFrame = 0;
         };
         this.pressEventHandler = function (e) {
             var mouseX = e.changedTouches ?
@@ -45,9 +50,13 @@ var WireWorld = /** @class */ (function () {
             mouseY -= Math.floor(_this.canvas.offsetTop);
             mouseX /= _this.scale;
             mouseY /= _this.scale;
-            console.log("x:" + mouseX + "  y:" + mouseY);
+            mouseX = Math.floor(mouseX);
+            mouseY = Math.floor(mouseY);
             _this.painting = true;
-            _this.addTypeToGrid(_this.grid, _this.drawType, Math.floor(mouseX), Math.floor(mouseY));
+            if (_this.drawType == WWType.Wire || _this.drawType == WWType.None) {
+                _this.addTypeToGrid(_this.wire, _this.drawType, mouseX, mouseY);
+            }
+            _this.addTypeToGrid(_this.grid, _this.drawType, mouseX, mouseY);
             _this.render();
         };
         this.dragEventHandler = function (e) {
@@ -61,14 +70,24 @@ var WireWorld = /** @class */ (function () {
             mouseY -= _this.canvas.offsetTop;
             mouseX /= _this.scale;
             mouseY /= _this.scale;
+            mouseX = Math.floor(mouseX);
+            mouseY = Math.floor(mouseY);
             if (_this.painting) {
-                _this.addTypeToGrid(_this.grid, _this.drawType, Math.floor(mouseX), Math.floor(mouseY));
+                if (_this.drawType == WWType.Wire || _this.drawType == WWType.None) {
+                    _this.addTypeToGrid(_this.wire, _this.drawType, mouseX, mouseY);
+                }
+                _this.addTypeToGrid(_this.grid, _this.drawType, mouseX, mouseY);
                 _this.render();
             }
             e.preventDefault();
         };
         this.releaseEventHandler = function (e) {
             _this.painting = false;
+            _this.render();
+        };
+        this.reset = function () {
+            _this.pause();
+            _this.grid = _this.wire.slice(0, _this.size * _this.size);
             _this.render();
         };
         this.getTypeFromGrid = function (grid, x, y) {
@@ -84,19 +103,33 @@ var WireWorld = /** @class */ (function () {
             }
             _this.context.putImageData(_this.image, 0, 0);
         };
+        this.run = function () {
+            var now = Date.now();
+            if (now - _this.lastUpdate >= _this.frameTime) {
+                _this.lastUpdate = now;
+                _this.update();
+                _this.animFrame = requestAnimationFrame(_this.run);
+                return;
+            }
+            _this.animFrame = requestAnimationFrame(_this.run);
+        };
+        this.pause = function () {
+            cancelAnimationFrame(_this.animFrame);
+        };
         this.update = function () {
+            var grid2 = new Array(_this.size * _this.size);
             for (var y = 0; y < _this.size; ++y) {
                 for (var x = 0; x < _this.size; ++x) {
                     var type = _this.getTypeFromGrid(_this.grid, x, y);
                     switch (type) {
                         case WWType.None:
-                            _this.addTypeToGrid(_this.grid2, WWType.None, x, y);
+                            _this.addTypeToGrid(grid2, WWType.None, x, y);
                             break;
                         case WWType.Tail:
-                            _this.addTypeToGrid(_this.grid2, WWType.Wire, x, y);
+                            _this.addTypeToGrid(grid2, WWType.Wire, x, y);
                             break;
                         case WWType.Head:
-                            _this.addTypeToGrid(_this.grid2, WWType.Tail, x, y);
+                            _this.addTypeToGrid(grid2, WWType.Tail, x, y);
                             break;
                         case WWType.Wire:
                             var count = 0;
@@ -125,10 +158,10 @@ var WireWorld = /** @class */ (function () {
                                 count++;
                             }
                             if (count == 1 || count == 2) {
-                                _this.addTypeToGrid(_this.grid2, WWType.Head, x, y);
+                                _this.addTypeToGrid(grid2, WWType.Head, x, y);
                             }
                             else {
-                                _this.addTypeToGrid(_this.grid2, WWType.Wire, x, y);
+                                _this.addTypeToGrid(grid2, WWType.Wire, x, y);
                             }
                             break;
                         default:
@@ -136,7 +169,43 @@ var WireWorld = /** @class */ (function () {
                     }
                 }
             }
-            _this.grid = _this.grid2.slice(0, _this.size * _this.size);
+            _this.grid = grid2.slice(0, _this.size * _this.size);
+            _this.render();
+        };
+        this.exportWorld = function () {
+            var ex = {
+                size: _this.size,
+                scale: _this.scale,
+                grid: _this.grid.slice(0, _this.size * _this.size),
+                wire: _this.wire.slice(0, _this.size * _this.size),
+            };
+            var json = JSON.stringify(ex);
+            document.getElementById("textpad").value = btoa(json);
+        };
+        this.importWorld = function () {
+            var json = atob(document.getElementById("textpad").value);
+            var ex = JSON.parse(json);
+            var scale = ex.scale;
+            var size = ex.size;
+            var grid = ex.grid;
+            var wire = ex.wire;
+            _this.grid = grid.slice(0, size * size);
+            _this.wire = wire.slice(0, size * size);
+            _this.scale = scale;
+            _this.size = size;
+            for (var i = 0; i < _this.scaleSelector.options.length; ++i) {
+                if (_this.scaleSelector.options.item(i).value == scale) {
+                    _this.scaleSelector.selectedIndex = i;
+                    break;
+                }
+            }
+            for (var i = 0; i < _this.sizeSelector.options.length; ++i) {
+                if (_this.sizeSelector.options.item(i).value == size) {
+                    _this.sizeSelector.selectedIndex = i;
+                    break;
+                }
+            }
+            _this.initialize(true);
             _this.render();
         };
         var canvas = document.getElementById("world");
@@ -144,10 +213,11 @@ var WireWorld = /** @class */ (function () {
         this.scaleSelector = document.getElementById("scale");
         this.sizeSelector = document.getElementById("size");
         context.imageSmoothingEnabled = false;
-        context.imageSmoothingQuality = "low";
         this.canvas = canvas;
         this.context = context;
-        this.reset();
+        this.frameTime = 1000 / 15;
+        this.lastUpdate = Date.now();
+        this.initialize();
         this.createUserEvents();
     }
     WireWorld.prototype.createUserEvents = function () {
@@ -165,10 +235,15 @@ var WireWorld = /** @class */ (function () {
         document.getElementById("dttail").addEventListener("click", function () { _this.setDrawType(WWType.Tail); });
         document.getElementById("dtwire").addEventListener("click", function () { _this.setDrawType(WWType.Wire); });
         document.getElementById("dtnone").addEventListener("click", function () { _this.setDrawType(WWType.None); });
+        document.getElementById("step").addEventListener("click", function () { _this.update(); });
+        document.getElementById("run").addEventListener("click", function () { _this.run(); });
+        document.getElementById("pause").addEventListener("click", function () { _this.pause(); });
+        document.getElementById("reset").addEventListener("click", function () { _this.reset(); });
         document.getElementById("clear").addEventListener("click", function () { _this.clearWorld(); });
-        document.getElementById("update").addEventListener("click", function () { _this.update(); });
-        this.scaleSelector.addEventListener("change", this.reset);
-        this.sizeSelector.addEventListener("change", this.reset);
+        document.getElementById("export").addEventListener("click", function () { _this.exportWorld(); });
+        document.getElementById("import").addEventListener("click", function () { _this.importWorld(); });
+        this.scaleSelector.addEventListener("change", function () { _this.initialize(); });
+        this.sizeSelector.addEventListener("change", function () { _this.initialize(); });
     };
     WireWorld.prototype.setDrawType = function (type) {
         this.drawType = type;
@@ -176,7 +251,7 @@ var WireWorld = /** @class */ (function () {
     WireWorld.prototype.clearWorld = function () {
         for (var i = 0; i < this.size * this.size; ++i) {
             this.grid[i] = WWType.None;
-            this.grid2[i] = WWType.None;
+            this.wire[i] = WWType.None;
         }
         this.render();
     };
