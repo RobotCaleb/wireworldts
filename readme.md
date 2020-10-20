@@ -1,2 +1,3 @@
 Wireworld in typescript.
-See at ___
+
+See at https://robotcaleb.github.io/wireworldts/
