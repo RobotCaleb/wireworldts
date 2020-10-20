@@ -175,7 +175,6 @@ var WireWorld = /** @class */ (function () {
         this.exportWorld = function () {
             var ex = {
                 size: _this.size,
-                scale: _this.scale,
                 grid: _this.grid.slice(0, _this.size * _this.size),
                 wire: _this.wire.slice(0, _this.size * _this.size),
             };
@@ -185,20 +184,12 @@ var WireWorld = /** @class */ (function () {
         this.importWorld = function () {
             var json = atob(document.getElementById("textpad").value);
             var ex = JSON.parse(json);
-            var scale = ex.scale;
             var size = ex.size;
             var grid = ex.grid;
             var wire = ex.wire;
             _this.grid = grid.slice(0, size * size);
             _this.wire = wire.slice(0, size * size);
-            _this.scale = scale;
             _this.size = size;
-            for (var i = 0; i < _this.scaleSelector.options.length; ++i) {
-                if (_this.scaleSelector.options.item(i).value == scale) {
-                    _this.scaleSelector.selectedIndex = i;
-                    break;
-                }
-            }
             for (var i = 0; i < _this.sizeSelector.options.length; ++i) {
                 if (_this.sizeSelector.options.item(i).value == size) {
                     _this.sizeSelector.selectedIndex = i;
@@ -242,8 +233,8 @@ var WireWorld = /** @class */ (function () {
         document.getElementById("clear").addEventListener("click", function () { _this.clearWorld(); });
         document.getElementById("export").addEventListener("click", function () { _this.exportWorld(); });
         document.getElementById("import").addEventListener("click", function () { _this.importWorld(); });
-        this.scaleSelector.addEventListener("change", function () { _this.initialize(); });
-        this.sizeSelector.addEventListener("change", function () { _this.initialize(); });
+        this.scaleSelector.addEventListener("change", function () { _this.initialize(true); _this.render(); });
+        this.sizeSelector.addEventListener("change", function () { _this.initialize(); _this.render(); });
     };
     WireWorld.prototype.setDrawType = function (type) {
         this.drawType = type;

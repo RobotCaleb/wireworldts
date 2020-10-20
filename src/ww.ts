@@ -111,8 +111,8 @@ class WireWorld {
         document.getElementById("export").addEventListener("click", () => { this.exportWorld(); });
         document.getElementById("import").addEventListener("click", () => { this.importWorld(); });
 
-        this.scaleSelector.addEventListener("change", () => { this.initialize(); });
-        this.sizeSelector.addEventListener("change", () => { this.initialize(); });
+        this.scaleSelector.addEventListener("change", () => { this.initialize(true); this.render(); });
+        this.sizeSelector.addEventListener("change", () => { this.initialize(); this.render(); });
     }
 
     private setDrawType(type: WWType) {
@@ -295,7 +295,6 @@ class WireWorld {
     private exportWorld = () => {
         let ex = {
             size: this.size,
-            scale: this.scale,
             grid: this.grid.slice(0, this.size * this.size),
             wire: this.wire.slice(0, this.size * this.size),
         };
@@ -308,21 +307,13 @@ class WireWorld {
         let json = atob((document.getElementById("textpad") as HTMLTextAreaElement).value);
 
         let ex = JSON.parse(json);
-        let scale = ex.scale;
         let size = ex.size;
         let grid: WWType[] = ex.grid;
         let wire: WWType[] = ex.wire;
 
         this.grid = grid.slice(0, size * size);
         this.wire = wire.slice(0, size * size);
-        this.scale = scale;
         this.size = size;
-        for (let i = 0; i < this.scaleSelector.options.length; ++i) {
-            if (this.scaleSelector.options.item(i).value == scale) {
-                this.scaleSelector.selectedIndex = i;
-                break;
-            }
-        }
         for (let i = 0; i < this.sizeSelector.options.length; ++i) {
             if (this.sizeSelector.options.item(i).value == size) {
                 this.sizeSelector.selectedIndex = i;
